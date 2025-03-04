@@ -311,9 +311,7 @@ runs:
         echo "result<<EORESULTTFVIAPR"$'\n'"$console"$'\n'EORESULTTFVIAPR >> "$GITHUB_OUTPUT"
 
         # Parse the tf.console.txt file for the summary.
-        echo "summary"
         summary=$(awk '/^(Error:|Plan:|Apply complete!|No changes.|Success)/ {line=$0} END {if (line) print line; else print "View output."}' tf.console.txt)
-        echo $summary
         echo "summary=$summary" >> "$GITHUB_OUTPUT"
 
         # If steps.format.outcome failed, set syntax highlighting to diff, otherwise set it to hcl.
@@ -321,6 +319,7 @@ runs:
         if [[ "${{ steps.format.outcome }}" == "failure" ]]; then syntax="diff"; fi
 
         # Add summary to the job status.
+        gh api /repos/${{ github.repository }}/check-runs/${{ steps.identifier.outputs.job }} --header "$GH_API" --method PATCH --field "output[title]=${summary}" --field "output[summary]=${summary}" --verbose
         check_run=$(gh api /repos/${{ github.repository }}/check-runs/${{ steps.identifier.outputs.job }} --header "$GH_API" --method PATCH --field "output[title]=${summary}" --field "output[summary]=${summary}")
 
         # From check_run, echo html_url.
@@ -329,6 +328,9 @@ runs:
         run_url=$(echo ${check_url}#step:${{ steps.identifier.outputs.step }}:1)
         echo "run_url=$run_url" >> "$GITHUB_OUTPUT"
 
+        echo "got here: oogabooga"
+        cat tf.diff.txt
+        echo "end of tf diff"
         # If tf.diff.txt exists, display it within a diff block, truncated for character limit.
         if [[ -s tf.diff.txt ]]; then
           # Get count of lines in tf.diff.txt which don't start with "# ".
