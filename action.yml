@@ -302,13 +302,18 @@ runs:
         command=$(echo "$command" | tr -d '\n')$command_append
         echo "command=$command" >> "$GITHUB_OUTPUT"
 
+        echo "debug1"
+        cat tf.console.txt
+
         # Parse the tf.console.txt file, truncated for character limit.
         console=$(head --bytes=42000 tf.console.txt)
         if [[ ${#console} -eq 42000 ]]; then console="${console}"$'\n…'; fi
         echo "result<<EORESULTTFVIAPR"$'\n'"$console"$'\n'EORESULTTFVIAPR >> "$GITHUB_OUTPUT"
 
         # Parse the tf.console.txt file for the summary.
+        echo "summary"
         summary=$(awk '/^(Error:|Plan:|Apply complete!|No changes.|Success)/ {line=$0} END {if (line) print line; else print "View output."}' tf.console.txt)
+        echo $summary
         echo "summary=$summary" >> "$GITHUB_OUTPUT"
 
         # If steps.format.outcome failed, set syntax highlighting to diff, otherwise set it to hcl.
@@ -382,8 +387,6 @@ runs:
         EOBODYTFVIAPR
         )
 
-        echo "debug"
-        echo $body
         # Post output to job summary.
         echo "$body" >> $GITHUB_STEP_SUMMARY
         echo "comment_body<<EOCOMMENTTFVIAPR"$'\n'"$body"$'\n'EOCOMMENTTFVIAPR >> "$GITHUB_OUTPUT"
@@ -394,7 +397,6 @@ runs:
           list_comments=$(gh api /repos/${{ github.repository }}/issues/${{ steps.identifier.outputs.pr }}/comments --header "$GH_API" --method GET --field per_page=100)
           bot_comment=$(echo "$list_comments" | jq --raw-output --arg identifier "${{ steps.identifier.outputs.name }}" '.[] | select(.user.type == "Bot") | select(.body | contains($identifier)) | .id' | tail -n 1)
 
-          echo "gotthere: asdf"
           if [[ -n "$bot_comment" ]]; then
             if [[ "${{ inputs.comment-method }}" == "recreate" ]]; then
               # Delete previous comment before posting a new one.
